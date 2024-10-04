@@ -4,65 +4,36 @@ on:
   repository_dispatch:
     types:
       - release-triggered
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Version type'
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
 
 jobs:
-  release-major:
-    if: ${{ github.event.client_payload.release_type == 'major' }}
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: fregante/setup-git-user@v1
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          registry-url: 'https://registry.npmjs.org'
-      - run: yarn install
-      - run: yarn build
-      - id: prepare
-        run: yarn run release-major
-      - id: publish
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_AUTOMATION_TOKEN}}
-  release-minor:
-    if: ${{ github.event.client_payload.release_type == 'minor' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: fregante/setup-git-user@v1
+      - uses: fregante/setup-git-user@v2
       - uses: actions/setup-node@v4
         with:
           node-version: 18
           registry-url: 'https://registry.npmjs.org'
       - run: yarn install
-      - run: yarn build
-      - id: prepare
-        run: yarn run release-minor
-      - id: publish
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_AUTOMATION_TOKEN}}
-  release-patch:
-    if: ${{ github.event.client_payload.release_type == 'patch' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: fregante/setup-git-user@v1
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          registry-url: 'https://registry.npmjs.org'
-      - run: yarn install
-      - run: yarn build
-      - id: prepare
-        run: yarn run release-patch
-      - id: publish
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_AUTOMATION_TOKEN}}
+      - name: Build, Gen Changelog, Commit, Tag & Push
+        run: |
+            release_type=${{ github.event.inputs.release_type || github.event.client_payload.release_type }}
+            npm version $release_type -m "chore: release %s" --tag-version-prefix=""
+
+      # - id: publish
+      #   run: npm publish --access public
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{secrets.NPM_AUTOMATION_TOKEN}}
